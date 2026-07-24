@@ -1,5 +1,0 @@
-{
-  "rootDirectory": "apps/web",
-  "buildCommand": "npx nuxi generate",
-  "installCommand": "pnpm install"
-}
