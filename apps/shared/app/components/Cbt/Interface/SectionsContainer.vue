@@ -8,6 +8,7 @@ const props = defineProps<{
     colSpan2?: boolean
   }[]
   testSectionsSummary: TestSectionsSummary
+  lockedSections?: Set<string>
 }>()
 
 const emit = defineEmits<{
@@ -117,16 +118,21 @@ watch(
           :key="sectionItem.name"
         >
           <div
-            class="flex items-center gap-2 cursor-pointer"
+            class="flex items-center gap-2"
             :class="{
+              'cursor-pointer': !lockedSections?.has(sectionItem.name),
+              'cursor-not-allowed opacity-40': lockedSections?.has(sectionItem.name),
               'primary-theme': sectionItem.name === currentSection,
               'border-slate-400 border-r-2!':
                 index === visibleSections.length - 1,
             }"
             :data-id="'data-id_' + sectionItem.name"
-            @click=" emit('sectionChange', sectionItem.name)"
+            @click="!lockedSections?.has(sectionItem.name) && emit('sectionChange', sectionItem.name)"
           >
             <span class="pl-3 py-0.5">
+              <template v-if="lockedSections?.has(sectionItem.name)">
+                <Icon name="material-symbols:lock" class="mr-1 inline-block text-sm" />
+              </template>
               {{ sectionItem.name }}
             </span>
 

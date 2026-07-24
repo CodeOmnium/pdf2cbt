@@ -53,6 +53,29 @@
                     border border-surface-700 rounded-md"
                 >
                   <div class="grid grid-cols-1 w-full">
+                    <div class="grid grid-cols-1 w-full mb-3">
+                      <UiLabel
+                        class="mb-0.5 text-center font-semibold"
+                        for="exam_preset"
+                      >
+                        Exam Preset
+                      </UiLabel>
+                      <BaseSelect
+                        id="exam_preset"
+                        v-model="selectedExamPresetKey"
+                        size="sm"
+                        :options="examPresetSelectOptions"
+                        trigger-class="w-full"
+                        :disabled="!!testState.continueLastTest"
+                      />
+                      <span
+                        v-if="selectedExamPresetKey !== 'custom'"
+                        class="text-xs text-center mt-1 text-muted-foreground"
+                      >
+                        {{ currentExamPreset?.description }}<br>
+                        {{ currentExamPreset?.markingSummary }}
+                      </span>
+                    </div>
                     <div class="grid grid-cols-1 w-full mr-0.5">
                       <UiLabel
                         class="mb-0.5"
@@ -1194,6 +1217,7 @@
 import type { LocationQueryValue } from 'vue-router'
 import { CBTInterfaceQueryParams } from '#layers/shared/shared/enums'
 import { ANSWER_OPTIONS_COUNTER_TYPES, MIME_TYPE } from '#layers/shared/shared/constants'
+import { EXAM_PRESETS, EXAM_PRESET_LIST } from '#layers/shared/shared/exam-presets'
 
 type ImportExportTypeKey = 'import' | 'export' | 'restoreFromSaved' | 'reset'
 
@@ -1517,6 +1541,58 @@ const statusKeyNames = {
   marked: 'Marked for Review',
   markedAnswered: 'MFR & Answered',
 }
+
+const selectedExamPresetKey = ref(testSettings.value.examPresetKey)
+
+const examPresetSelectOptions = EXAM_PRESET_LIST.map(p => ({
+  name: p.name,
+  value: p.value,
+}))
+
+const currentExamPreset = computed(() => EXAM_PRESETS[selectedExamPresetKey.value])
+
+let isApplyingPreset = false
+
+watch(selectedExamPresetKey, (newKey) => {
+  if (newKey === 'custom') {
+    testSettings.value.examPresetKey = 'custom'
+    testSettings.value.sectionTimeLockRules = []
+    return
+  }
+  const preset = EXAM_PRESETS[newKey]
+  if (!preset) return
+
+  isApplyingPreset = true
+  testTimeFormatWatcher.pause()
+  testDurationWatcher.pause()
+
+  Object.assign(testSettings.value, preset.testSettings)
+  testSettings.value.examPresetKey = newKey
+  testSettings.value.sectionTimeLockRules = preset.sectionTimeLockRules ?? []
+
+  const totalSeconds = testSettings.value.durationInSeconds
+  testTimings.s = totalSeconds % 60
+  if (testSettings.value.timeFormat === 'mmm:ss') {
+    testTimings.m = Math.floor(totalSeconds / 60)
+    testTimings.h = 0
+  }
+  else {
+    testTimings.m = Math.floor(totalSeconds / 60) % 60
+    testTimings.h = Math.floor(totalSeconds / 3600)
+  }
+
+  nextTick(() => {
+    testDurationWatcher.resume()
+    testTimeFormatWatcher.resume()
+    isApplyingPreset = false
+  })
+})
+
+onUnmounted(() => {
+  if (selectedExamPresetKey.value && selectedExamPresetKey.value !== 'custom') {
+    testSettings.value.examPresetKey = selectedExamPresetKey.value
+  }
+})
 
 const prepareTestState = shallowReactive({
   isOngoingTestFoundInDB: false,

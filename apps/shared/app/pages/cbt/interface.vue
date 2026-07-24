@@ -89,6 +89,7 @@
             :question-status-list="questionStatusList"
             :test-sections-summary="testSectionsSummary"
             :current-section="currentTestState.section"
+            :locked-sections="lockedSections"
             @section-change="changeCurrentQuestion('sectionBtn', null, $event)"
           />
         </div>
@@ -696,6 +697,28 @@ const testTotalSummary = computed(() => {
   return total
 })
 
+const lockedSections = computed(() => {
+  const rules = testSettings.value.sectionTimeLockRules
+  if (!rules || rules.length === 0) return new Set<string>()
+
+  const remaining = currentTestState.value.remainingSeconds
+  if (remaining === null) return new Set<string>()
+
+  const locked = new Set<string>()
+  for (const rule of rules) {
+    for (const section of rule.sections) {
+      const isAccessible = (
+        (rule.accessibleWhenRemainingGte === undefined || remaining >= rule.accessibleWhenRemainingGte)
+        && (rule.accessibleWhenRemainingLte === undefined || remaining <= rule.accessibleWhenRemainingLte)
+      )
+      if (!isAccessible) {
+        locked.add(section)
+      }
+    }
+  }
+  return locked
+})
+
 const {
   startCountdown,
   pauseCountdown,
@@ -833,6 +856,13 @@ function changeCurrentQuestion(
       if (newSection !== null) {
         const newQuestionNum = currentTestState.value.sectionsPrevQuestion[newSection]!
         newQueId = testSectionsData.value[newSection]![newQuestionNum]!.queId
+      }
+    }
+
+    if (newQueId !== null) {
+      if (newSection !== null && lockedSections.value.has(newSection)) {
+        newSection = null
+        newQueId = null
       }
     }
 

@@ -217,6 +217,21 @@ export type TestState = {
   isTestReady: boolean
 }
 
+export type SectionTimeLockRule = {
+  sections: string[]
+  accessibleWhenRemainingGte?: number
+  accessibleWhenRemainingLte?: number
+}
+
+export type ExamPresetConfig = {
+  key: string
+  name: string
+  description: string
+  markingSummary: string
+  testSettings: Partial<CbtTestSettings>
+  sectionTimeLockRules?: SectionTimeLockRule[]
+}
+
 export interface CbtTestSettings {
   testName: string
   timeFormat: 'mmm:ss' | 'hh:mm:ss'
@@ -226,6 +241,8 @@ export interface CbtTestSettings {
   questionImgScale: number
   saveTestData: boolean
   saveQuestionsLikeRealExams: boolean
+  examPresetKey: string
+  sectionTimeLockRules: SectionTimeLockRule[]
 }
 
 export type UploadedTestData = {

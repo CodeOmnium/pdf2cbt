@@ -138,6 +138,8 @@ const defaultTestSettings: CbtTestSettings = {
   questionImgScale: 2,
   saveTestData: true,
   saveQuestionsLikeRealExams: true,
+  examPresetKey: 'custom',
+  sectionTimeLockRules: [],
 }
 
 export default () => {
