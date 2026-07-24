@@ -1,4 +1,5 @@
 {
-  "installCommand": "pnpm install",
-  "buildCommand": "pnpm --filter ./apps/web run generate"
+  "rootDirectory": "apps/web",
+  "buildCommand": "npx nuxi generate",
+  "installCommand": "pnpm install"
 }
