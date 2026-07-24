@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd apps/web && npx nuxi generate",
+  "installCommand": "pnpm install",
+  "outputDirectory": ".output/public",
+  "framework": "nuxtjs"
+}
