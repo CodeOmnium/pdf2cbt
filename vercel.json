@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm --filter=shared prepare && pnpm --filter=web build",
+  "buildCommand": "pnpm --filter pdf2cbt-web build",
   "installCommand": "pnpm install",
   "outputDirectory": "apps/web/.output/public"
 }
