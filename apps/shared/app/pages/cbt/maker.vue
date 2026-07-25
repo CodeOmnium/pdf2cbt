@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import '#layers/shared/app/assets/css/cbt-maker.css'
+import utilConcatPdfs from '#layers/shared/app/utils/utilConcatPdfs'
 import {
   cropperOverlayDatasKey,
   downloadDataKey,
@@ -42,6 +43,9 @@ const currentStep = shallowRef<number>(1)
 
 const pdfFile = shallowRef<Uint8Array | null>(null)
 
+const pdfFileSources = ref<{ name: string; file: File }[]>([])
+const fileInputRef = useTemplateRef<HTMLInputElement>('fileInputRef')
+
 const testConfig = reactive<PdfCropperJsonOutput['testConfig']>({
   pdfFileHash: '', // SHA-256 hash of pdf file
   additionalData: {},
@@ -61,30 +65,57 @@ const dialogsState = shallowReactive({
   showGenerateOutput: false,
 })
 
-async function handlePdfFileUpload(file: File | Uint8Array) {
+function onFilesSelected(e: Event) {
+  const input = e.target as HTMLInputElement
+  if (!input.files?.length) return
+
+  const newSources: { name: string; file: File }[] = []
+  for (const file of input.files) {
+    if (!pdfFileSources.value.some(s => s.name === file.name)) {
+      newSources.push({ name: file.name, file })
+    }
+  }
+  if (newSources.length) {
+    pdfFileSources.value = [...pdfFileSources.value, ...newSources]
+  }
+  input.value = ''
+}
+
+function removePdfFile(index: number) {
+  pdfFileSources.value = pdfFileSources.value.filter((_, i) => i !== index)
+}
+
+async function processPdfFiles() {
+  if (pdfFileSources.value.length === 0) return
+
   pdfLoadingState.isLoading = true
   testConfig.pdfFileHash = ''
   testConfig.additionalData = {}
 
   try {
-    if (file instanceof File) {
-      const filenameParts = file.name.split('.')
-      filenameParts.pop()
-      const filename = filenameParts.join('.')
-      outputZipFileName.value = filename
+    const fileBuffers = await Promise.all(
+      pdfFileSources.value.map(s => s.file.arrayBuffer().then(b => new Uint8Array(b))),
+    )
 
-      pdfFile.value = new Uint8Array(await file.arrayBuffer())
-    }
-    else {
-      pdfFile.value = file
-    }
+    const mergedPdf = await utilConcatPdfs(fileBuffers)
+    if (!mergedPdf) throw new Error('Failed to merge PDFs')
+
+    pdfFile.value = mergedPdf
+
+    const names = pdfFileSources.value.map(s => {
+      const parts = s.name.split('.')
+      parts.pop()
+      return parts.join('.')
+    })
+    outputZipFileName.value = names.join('_') || 'pdf2cbt_cropperdata'
 
     await nextTick()
 
     return pdfCropperPanelElem.value?.loadPdfFile()
   }
   catch (err) {
-    useErrorToast('Error loading uploaded file:', err)
+    pdfLoadingState.isLoading = false
+    useErrorToast('Error processing PDF files:', err)
     return err
   }
 }
@@ -100,10 +131,13 @@ async function loadExistingData(
     if (!pdfCropperPanelElem.value)
       throw new Error('Pdf Cropper Panel Ref is undefined')
 
-    const maybeErr = await handlePdfFileUpload(data.pdfBuffer)
-    if (maybeErr instanceof Error) {
-      throw maybeErr
-    }
+    pdfLoadingState.isLoading = true
+    pdfFile.value = data.pdfBuffer
+    pdfFileSources.value = [{ name: data.filename || 'questions.pdf', file: new File([data.pdfBuffer], data.filename || 'questions.pdf') }]
+
+    await nextTick()
+
+    await pdfCropperPanelElem.value.loadPdfFile()
 
     jsonOutputData.value = data.jsonData
 
@@ -206,21 +240,70 @@ provide(instructionsDataKey, instructionsData)
       :pdf-file="pdfFile"
     >
       <div class="flex flex-col gap-6 justify-center py-6 h-full">
-        <div class="flex gap-5 items-center justify-center">
-          <BaseSimpleFileUpload
-            accept="application/pdf,.pdf"
-            :label="pdfLoadingState.isLoading ? 'Please wait, loading PDF...' : 'Select a PDF'"
-            :icon-name="pdfLoadingState.isLoading ? 'line-md:loading-twotone-loop' : 'line-md:plus'"
-            invalid-file-type-message="Please select a valid PDF."
-            @upload="handlePdfFileUpload"
-          />
-          <BaseButton
-            label="Load Existing Data"
-            variant="warn"
-            @click="dialogsState.showEditExistingFiles = true"
-          />
+        <template v-if="pdfFileSources.length === 0">
+          <div class="flex gap-5 items-center justify-center">
+            <input
+              ref="fileInputRef"
+              type="file"
+              accept=".pdf"
+              multiple
+              class="hidden"
+              @change="onFilesSelected"
+            >
+            <BaseButton
+              label="Select PDFs"
+              icon-name="line-md:plus"
+              @click="fileInputRef?.click()"
+            />
+            <BaseButton
+              label="Load Existing Data"
+              variant="warn"
+              @click="dialogsState.showEditExistingFiles = true"
+            />
+          </div>
+          <DocsCbtMaker class="mx-4 sm:mx-10" />
+        </template>
+        <div
+          v-else
+          class="flex flex-col items-center gap-4 mx-auto w-full max-w-lg"
+        >
+          <div class="w-full border rounded-xl">
+            <div
+              v-for="(src, i) in pdfFileSources"
+              :key="i"
+              class="flex items-center gap-3 px-4 py-2 border-b last:border-b-0"
+            >
+              <span class="text-sm font-medium truncate grow">{{ src.name }}</span>
+              <BaseButton
+                variant="ghost"
+                size="icon"
+                icon-class="text-red-500"
+                icon-name="material-symbols:cancel-outline-rounded"
+                @click="removePdfFile(i)"
+              />
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <BaseButton
+              label="Add More"
+              icon-name="line-md:plus"
+              variant="outline"
+              @click="fileInputRef?.click()"
+            />
+            <BaseButton
+              :label="pdfLoadingState.isLoading ? 'Processing...' : 'Upload & Process'"
+              :disabled="pdfLoadingState.isLoading"
+              :icon-name="pdfLoadingState.isLoading ? 'line-md:loading-twotone-loop' : 'line-md:upload'"
+              @click="processPdfFiles"
+            />
+            <BaseButton
+              label="Clear All"
+              variant="destructive"
+              :disabled="pdfLoadingState.isLoading"
+              @click="pdfFileSources = []"
+            />
+          </div>
         </div>
-        <DocsCbtMaker class="mx-4 sm:mx-10" />
       </div>
     </CbtMakerPdfCropper>
     <LazyCbtMakerPostCropper
