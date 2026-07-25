@@ -1,6 +1,5 @@
 {
   "buildCommand": "pnpm --filter pdf2cbt-web build",
   "installCommand": "pnpm install",
-  "outputDirectory": "apps/web/.output/public",
-  "ignoreCommand": "git diff --quiet HEAD~1 HEAD -- apps/ vercel.json package.json pnpm-lock.yaml pnpm-workspace.yaml"
+  "outputDirectory": "apps/web/.output/public"
 }
