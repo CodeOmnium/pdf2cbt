@@ -85,6 +85,20 @@ function removePdfFile(index: number) {
   pdfFileSources.value = pdfFileSources.value.filter((_, i) => i !== index)
 }
 
+function movePdfFileUp(index: number) {
+  if (index === 0) return
+  const arr = [...pdfFileSources.value];
+  [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]]
+  pdfFileSources.value = arr
+}
+
+function movePdfFileDown(index: number) {
+  if (index === pdfFileSources.value.length - 1) return
+  const arr = [...pdfFileSources.value];
+  [arr[index], arr[index + 1]] = [arr[index + 1], arr[index]]
+  pdfFileSources.value = arr
+}
+
 async function processPdfFiles() {
   if (pdfFileSources.value.length === 0) return
 
@@ -271,12 +285,32 @@ provide(instructionsDataKey, instructionsData)
             <div
               v-for="(src, i) in pdfFileSources"
               :key="i"
-              class="flex items-center gap-3 px-4 py-2 border-b last:border-b-0"
+              class="flex items-center gap-1 px-4 py-2 border-b last:border-b-0"
             >
-              <span class="text-sm font-medium truncate grow">{{ src.name }}</span>
+              <span class="text-sm font-medium truncate grow order-1 md:order-none">{{ src.name }}</span>
+              <div class="flex gap-0">
+                <BaseButton
+                  variant="ghost"
+                  size="icon"
+                  class="size-7!"
+                  icon-name="line-md:arrow-up"
+                  :class="i === 0 ? 'opacity-20 pointer-events-none' : ''"
+                  @click="movePdfFileUp(i)"
+                />
+                <BaseButton
+                  variant="ghost"
+                  size="icon"
+                  class="size-7!"
+                  icon-name="line-md:arrow-down"
+                  :class="i === pdfFileSources.length - 1 ? 'opacity-20 pointer-events-none' : ''"
+                  @click="movePdfFileDown(i)"
+                />
+              </div>
+              <span class="text-xs text-muted-foreground order-2 md:order-none whitespace-nowrap">#{{ i + 1 }}</span>
               <BaseButton
                 variant="ghost"
                 size="icon"
+                class="size-7!"
                 icon-class="text-red-500"
                 icon-name="material-symbols:cancel-outline-rounded"
                 @click="removePdfFile(i)"
