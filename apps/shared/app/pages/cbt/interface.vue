@@ -726,6 +726,8 @@ const {
   stopCountdown,
 } = useCbtCountdownTimer()
 
+useExamNotifications()
+
 const testTimeLeftWithOffsetDurationString = computed(() => {
   const seconds = currentTestState.value.remainingSeconds ?? testSettings.value.durationInSeconds
   const timeFormat = testSettings.value.timeFormat
