@@ -1542,58 +1542,6 @@ const statusKeyNames = {
   markedAnswered: 'MFR & Answered',
 }
 
-const selectedExamPresetKey = ref(testSettings.value.examPresetKey)
-
-const examPresetSelectOptions = EXAM_PRESET_LIST.map(p => ({
-  name: p.name,
-  value: p.value,
-}))
-
-const currentExamPreset = computed(() => EXAM_PRESETS[selectedExamPresetKey.value])
-
-let isApplyingPreset = false
-
-watch(selectedExamPresetKey, (newKey) => {
-  if (newKey === 'custom') {
-    testSettings.value.examPresetKey = 'custom'
-    testSettings.value.sectionTimeLockRules = []
-    return
-  }
-  const preset = EXAM_PRESETS[newKey]
-  if (!preset) return
-
-  isApplyingPreset = true
-  testTimeFormatWatcher.pause()
-  testDurationWatcher.pause()
-
-  Object.assign(testSettings.value, preset.testSettings)
-  testSettings.value.examPresetKey = newKey
-  testSettings.value.sectionTimeLockRules = preset.sectionTimeLockRules ?? []
-
-  const totalSeconds = testSettings.value.durationInSeconds
-  testTimings.s = totalSeconds % 60
-  if (testSettings.value.timeFormat === 'mmm:ss') {
-    testTimings.m = Math.floor(totalSeconds / 60)
-    testTimings.h = 0
-  }
-  else {
-    testTimings.m = Math.floor(totalSeconds / 60) % 60
-    testTimings.h = Math.floor(totalSeconds / 3600)
-  }
-
-  nextTick(() => {
-    testDurationWatcher.resume()
-    testTimeFormatWatcher.resume()
-    isApplyingPreset = false
-  })
-})
-
-onUnmounted(() => {
-  if (selectedExamPresetKey.value && selectedExamPresetKey.value !== 'custom') {
-    testSettings.value.examPresetKey = selectedExamPresetKey.value
-  }
-})
-
 const prepareTestState = shallowReactive({
   isOngoingTestFoundInDB: false,
   dialogVisibility: false,
@@ -1714,6 +1662,58 @@ const testDurationWatcher = watch(
     }
   },
 )
+
+const selectedExamPresetKey = ref(testSettings.value.examPresetKey)
+
+const examPresetSelectOptions = EXAM_PRESET_LIST.map(p => ({
+  name: p.name,
+  value: p.value,
+}))
+
+const currentExamPreset = computed(() => EXAM_PRESETS[selectedExamPresetKey.value])
+
+let isApplyingPreset = false
+
+watch(selectedExamPresetKey, (newKey) => {
+  if (newKey === 'custom') {
+    testSettings.value.examPresetKey = 'custom'
+    testSettings.value.sectionTimeLockRules = []
+    return
+  }
+  const preset = EXAM_PRESETS[newKey]
+  if (!preset) return
+
+  isApplyingPreset = true
+  testTimeFormatWatcher.pause()
+  testDurationWatcher.pause()
+
+  Object.assign(testSettings.value, preset.testSettings)
+  testSettings.value.examPresetKey = newKey
+  testSettings.value.sectionTimeLockRules = preset.sectionTimeLockRules ?? []
+
+  const totalSeconds = testSettings.value.durationInSeconds
+  testTimings.s = totalSeconds % 60
+  if (testSettings.value.timeFormat === 'mmm:ss') {
+    testTimings.m = Math.floor(totalSeconds / 60)
+    testTimings.h = 0
+  }
+  else {
+    testTimings.m = Math.floor(totalSeconds / 60) % 60
+    testTimings.h = Math.floor(totalSeconds / 3600)
+  }
+
+  nextTick(() => {
+    testDurationWatcher.resume()
+    testTimeFormatWatcher.resume()
+    isApplyingPreset = false
+  })
+})
+
+onUnmounted(() => {
+  if (selectedExamPresetKey.value && selectedExamPresetKey.value !== 'custom') {
+    testSettings.value.examPresetKey = selectedExamPresetKey.value
+  }
+})
 
 watch(
   () => zipFileFromUrlState.isDialogOpen,

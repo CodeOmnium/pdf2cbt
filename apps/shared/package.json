@@ -12,5 +12,8 @@
   "scripts": {
     "postinstall": "nuxt prepare",
     "prepare": "nuxt prepare"
+  },
+  "devDependencies": {
+    "nuxt": "4.4.8"
   }
 }
